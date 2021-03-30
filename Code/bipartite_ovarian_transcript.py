@@ -9,7 +9,7 @@ ROC=np.array([50,100])
 
 ######adjacency matrix and input modifications 
 
-def adj_matrix2(mRNA_path,miRNA_path):
+def adj_matrix2(mRNA_path,miRNA_path,network):
   miRNA = pd.read_csv(miRNA_path,delimiter=',',header=None)
   miRNA=np.array(miRNA)
   data = pd.read_csv(mRNA_path,delimiter=',',header=None)
@@ -18,7 +18,7 @@ def adj_matrix2(mRNA_path,miRNA_path):
   feature = data[1:,0]
   sample = data[0,1:]
 
-  data = pd.read_excel('bipartite_targetscan.xlsx',header=None)
+  data = pd.read_excel(network,header=None)
   data=np.transpose(np.array(data))
   final_miRNA=data[1:,0]
   final_mRNA=data[0,1:]
@@ -46,7 +46,7 @@ def adj_matrix2(mRNA_path,miRNA_path):
 ######network propagation
 
 
-def NP(mRNA,miRNA,adj,alpha,maxiter):
+def NP(mRNA,miRNA,adj,alpha,names,sample_name,maxiter):
     
   print('Predicting protein expression for alpha=',alpha)
   miRNA1=miRNA
@@ -63,6 +63,8 @@ def NP(mRNA,miRNA,adj,alpha,maxiter):
       break
 
   print('optimized') 
+  mRNA1 = np.concatenate((uni_mRNA_names,mRNA1),axis=1)
+  mRNA1 = np.concatenate((new,mRNA1),axis=0)
   np.savetxt('predicted_protein.csv',mRNA1, delimiter=',')
   return mRNA1
  
@@ -70,7 +72,7 @@ def NP(mRNA,miRNA,adj,alpha,maxiter):
 
 #correlation
 
-
+"""
 def corr(protein,sample_name,mRNA_name,ROC,ground_truth):
   print('calculating correlations')
   gencode = pd.read_csv('gencode23.csv',delimiter=',',usecols=[0,10])
@@ -166,18 +168,20 @@ def corr(protein,sample_name,mRNA_name,ROC,ground_truth):
 
   return pear_coef,spearman_coef,roc11
   
+"""
 
-if len(sys.argv)!=5:
-  print('wrong number of inputs. please specify 5 parameters: code, mRNA, miRNA, ground truth, alpha')
+if len(sys.argv)!=6:
+  print('wrong number of inputs. please specify 5 parameters: code, mRNA, miRNA, network, ground truth, alpha')
   sys.exit()
 
 mRNA_path = sys.argv[1]
 miRNA_path = sys.argv[2]
-ground_truth = sys.argv[3]
-alpha = float(sys.argv[4])
+network = sys.argv[3]
+ground_truth = sys.argv[4]
+alpha = float(sys.argv[5])
 
 ##### processing mRNA, miRNA and interaction netowrk to find compatible matrices 
-adj,mRNA,miRNA,sample_name,uni_mRNA_names=adj_matrix2(mRNA_path,miRNA_path)
+adj,mRNA,miRNA,sample_name,uni_mRNA_names=adj_matrix2(mRNA_path,miRNA_path,network)
 C=np.sqrt(np.outer(np.sum(np.absolute(adj),0),np.sum(np.absolute(adj),1)))
 adj=np.divide(adj,C.transpose())
 print('adj normalized')
@@ -189,8 +193,14 @@ roc12=[]
 ##### calculating protein expression and correlation for different alphas
 # correlation is for evaluation purpose only. The variable "protein" below can be 
 # directly saved as predicted protein expression without running the code further. 
+uni_mRNA_names = np.expand_dims(uni_mRNA_names,1)
+new = []
+new.append('sample_name')
+new.extend(sample_name)
+new = np.expand_dims(new,0)
 
-protein=NP(mRNA,miRNA,adj,alpha,1000)
+protein=NP(mRNA,miRNA,adj,alpha,uni_mRNA_names,new,1000)
+"""
 pear_coef,spearman_coef,roc=corr(protein,sample_name,uni_mRNA_names,ROC,ground_truth)
 pearson.append(pear_coef)
 spearman.append(spearman_coef)
@@ -202,7 +212,7 @@ pearson.append(pear_coef)
 spearman.append(spearman_coef)
 roc12.append(roc)
 roc12=[e for sl in roc12 for e in sl]
-
+"""
 
 #np.savetxt('pearson_coef.csv',pearson, delimiter=',')
 #np.savetxt('spearman_coef.csv',spearman, delimiter=',')
